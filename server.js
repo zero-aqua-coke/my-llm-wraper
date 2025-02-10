@@ -18,6 +18,7 @@ app.post("/", async (req, res) => {
   const TURBO_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free";
   const FLUX_MODEL = "black-forest-labs/FLUX.1-schnell-Free";
   const MIXTRAL_MODEL = "mixtral-8x7b-32768";
+  const DEEPSEEK_MODEL = "deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free";
 
   async function callAI({
     url,
@@ -26,6 +27,7 @@ app.post("/", async (req, res) => {
     textForImage,
     apiKey,
     jsonMode = false,
+    max_tokens,
   }) {
     // const payload = {
     //   model,
@@ -39,6 +41,9 @@ app.post("/", async (req, res) => {
     const payload = {
       model,
     };
+    if (max_tokens) {
+      payload.max_tokens = max_tokens;
+    }
     if (text) {
       payload.messages = [
         {
@@ -98,17 +103,37 @@ app.post("/", async (req, res) => {
 
   // 3-1. 설명을 생성하는 프롬프트
   // llama-3-3-70b-free (together)
+  const prompt2 = await callAI({
+    url: `${TOGETHER_BASE_URL}/v1/chat/completions`,
+    apiKey: TOGETHER_API_KEY,
+    model: TURBO_MODEL,
+    // text,
+    text: `${text}를 바탕으로 맛집 추천에 어울리는 설명 생성을 위한 200자 이내의 한글 프롬프트를 작성해줘`,
+  }).then((res) => res.choices[0].message.content);
   // 3-2. 그거에서 프롬프트만 추출
   // mixtral-8x7b-32768 (groq)
+  const promptJSON2 = await callAI({
+    url: GROQ_URL,
+    apiKey: GROQ_API_KEY,
+    model: MIXTRAL_MODEL,
+    // text,
+    text: `${prompt2}에서 reasoning을 위해 작성된 200자 이내의 한글 프롬프트를 JSON Object로 prompt라는 key로 JSON string으로 ouput해줘`,
+    jsonMode: true,
+  }).then((res) => JSON.parse(res.choices[0].message.content).prompt);
   // 3-3. 그걸로 thinking 사용해서 설명을 작성
   // DeepSeek-R1-Distill-Llama-70B-free (together)
-
-  // 4. 그 결과를 { image: _, desc: _ }
+  const desc = await callAI({
+    url: `${TOGETHER_BASE_URL}/v1/chat/completions`,
+    apiKey: TOGETHER_API_KEY,
+    model: DEEPSEEK_MODEL,
+    text: promptJSON2,
+    max_tokens: 2048,
+  }).then((res) => res.choices[0].message.content.split("</think>")[1]);
 
   //   desc = JSON.stringify(prompt);
-  console.log(image);
-  desc = JSON.stringify(promptJSON);
+  //   console.log(image);
 
+  // 4. 그 결과를 { image: _, desc: _ }
   res.json({
     image,
     desc,
