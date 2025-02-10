@@ -73,7 +73,11 @@ app.post("/", async (req, res) => {
       },
     }
   );
-  res.json({ data: response.data });
+  //   res.json({ data: response.data });
+  res.json({
+    image: "https://zero-aqua-coke.github.io/my-llm-pjt/assets/preview.png",
+    desc: "정말 맛있는 음식입니다",
+  });
 });
 
 app.listen(port, () => {
