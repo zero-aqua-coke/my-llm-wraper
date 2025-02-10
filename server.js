@@ -8,7 +8,14 @@ const app = express();
 const port = 3000;
 
 app.use(express.json());
-app.use(cors());
+// app.use(cors());
+app.use(
+  cors({
+    origin: "https://zero-aqua-coke.github.io", // 여러분들 거
+    methods: ["POST"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 
 app.post("/", async (req, res) => {
   const { TOGETHER_API_KEY, GROQ_API_KEY } = process.env;
